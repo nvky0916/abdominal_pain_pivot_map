@@ -1,7 +1,7 @@
 /* ================================================================
    app.js ― 腹痛ピボットマップの「動き」
    ----------------------------------------------------------------
-   data.js のデータを読んで、図（SVG）と右の説明欄を作る。
+   data.js（軸）と diseases フォルダ（疾患）を読んで、図（SVG）と右の説明欄を作る。
    勉強で軸や疾患を変えるだけなら、このファイルは触らなくていい。
 
    全体の流れ
@@ -22,11 +22,25 @@
 
 /* ================================================================
    0. データの書き間違いチェック
-   data.js で存在しない軸IDを書いたり、IDが重複したりすると、
+   data.js / diseases フォルダで存在しない軸IDを書いたり、IDが重複したりすると、
    画面の上に赤い警告を出す。勉強中の編集ミスに気づくための仕組み。
    ================================================================ */
+// ファイルが読み込めていないとき（ファイル名の間違い・置き忘れなど）は、ここで止めて知らせる
+checkFilesLoaded();
+function checkFilesLoaded() {
+  const missing = [];
+  if (typeof AX === "undefined" || typeof CATS === "undefined") missing.push("js/data.js（軸）");
+  if (typeof DIS === "undefined" || typeof GENRES === "undefined") missing.push("js/diseases/00_genres.js（疾患のジャンル）");
+  if (missing.length) {
+    const box = document.getElementById("errors");
+    box.hidden = false;
+    box.innerHTML = `<b>読み込めないファイルがあります</b><ul>${missing.map(m => `<li>${m} が見つからないか、文法の誤りで止まっている</li>`).join("")}</ul>`;
+    throw new Error("データファイルを読み込めない");
+  }
+}
+
 function validateData() {
-  const problems = [];
+  const problems = DATA_PROBLEMS.slice(); // ジャンルファイルの読み込み中に見つかった問題
   const catIds = CATS.map(c => c[0]);
 
   for (const key in AX) {
@@ -37,7 +51,7 @@ function validateData() {
 
   const seen = new Set();
   for (const d of DIS) {
-    if (seen.has(d.id)) problems.push(`疾患ID「${d.id}」が重複している`);
+    if (seen.has(d.id)) problems.push(`疾患ID「${d.id}」が重複している（別のジャンルファイルにないか確認）`);
     seen.add(d.id);
     if (![1, 2, 3].includes(d.t)) problems.push(`疾患「${d.l}」の緊急度 t は 1・2・3 のどれか`);
     if (!Array.isArray(d.a) || d.a.length === 0) problems.push(`疾患「${d.l}」に軸 a が1つもない`);
@@ -54,7 +68,7 @@ function validateData() {
   if (problems.length) {
     const box = document.getElementById("errors");
     box.hidden = false;
-    box.innerHTML = "<b>data.js に直すところがあります</b><ul>" +
+    box.innerHTML = "<b>data.js / diseases フォルダに直すところがあります</b><ul>" +
       problems.map(p => `<li>${esc(p)}</li>`).join("") + "</ul>";
   }
   return problems.length === 0;
@@ -129,8 +143,15 @@ const state = {
   mode: "axes",              // "axes"=軸を選ぶモード / "disease"=疾患中心モード
   sel: ["sud", "fev", "vom"], // 最初に選ばれている軸（好きに変えてよい）
   center: "ami",             // 疾患中心モードで最初に中心に置く疾患
-  pinned: null               // タップで固定している対象（領域・疾患・軸）
+  pinned: null,              // タップで固定している対象（領域・疾患・軸）
+  genres: new Set(GENRES.map(g => g.id)) // 表示するジャンル（最初は全部）
 };
+
+// 今表示するジャンルに入っている疾患だけを返す。図はこの疾患だけで作る
+const activeDiseases = () => DIS.filter(d => state.genres.has(d.g));
+
+// 疾患のジャンル名
+const genreOf = d => GENRES.find(g => g.id === d.g) || { n: "未分類", group: "" };
 
 // 図に描いた疾患の点を、疾患IDから引けるようにしておく
 let dotNodes = {};
@@ -342,7 +363,7 @@ function buildVenn() {
      ほかのラベルから一番離れた場所を選ぶ。ラベルが入らなければ点だけ置く */
   const rand = seededRandom(42);
   const dotLayer = el("g", {}, svg);
-  const members = DIS.filter(d => diseaseMask(d)).sort((a, b) => a.t - b.t || b.a.length - a.a.length);
+  const members = activeDiseases().filter(d => diseaseMask(d)).sort((a, b) => a.t - b.t || b.a.length - a.a.length);
   venn.members = members;
   venn.unplaced = [];
 
@@ -368,7 +389,7 @@ function buildVenn() {
   }
 
   el("text", { x: 20, y: H - 16, class: "cnt" }, svg).textContent =
-    `どの軸にも当てはまらない ${DIS.length - members.length}疾患は非表示`;
+    `どの軸にも当てはまらない ${activeDiseases().length - members.length}疾患は非表示`;
 
   // 点にマウス・タップ・キーボードの動作をつける
   for (const d of members) {
@@ -443,7 +464,7 @@ function diseaseCard(d) {
     const i = state.sel.indexOf(k);
     return i >= 0 ? `<span class="tag" style="--c:${SLOT[i]}">${esc(AX[k].n)}</span>` : `<span class="tag ghost">${esc(AX[k].n)}</span>`;
   }).join("");
-  return `<div class="ptag">${dotHTML(d)}<span class="small">${TIER_NAME[d.t]}</span></div>
+  return `<div class="ptag">${dotHTML(d)}<span class="small">${TIER_NAME[d.t]} · ${esc(genreOf(d).n)}</span></div>
     <h2>${esc(d.n)}</h2>
     <dl class="kv"><dt>決め手</dt><dd>${esc(d.k)}</dd><dt>検査</dt><dd>${esc(d.x)}</dd></dl>
     <div class="sec"><h3>この疾患の軸 ${d.a.length}</h3><div class="ptag">${tags}</div></div>
@@ -484,7 +505,7 @@ function buildRadial() {
   const angleOf = i => -Math.PI / 2 + 2 * Math.PI * i / k;  // i番目のスポークの角度（真上から時計回り）
 
   // 周りの疾患：中心と共有する軸 S を計算し、共有が多い順に並べる
-  const neighbours = DIS.filter(d => d.id !== c.id)
+  const neighbours = activeDiseases().filter(d => d.id !== c.id)
     .map(d => ({ d, S: d.a.filter(x => K.includes(x)) }))
     .filter(o => o.S.length > 0)
     .sort((a, b) => b.S.length - a.S.length || a.d.t - b.d.t);
@@ -568,7 +589,7 @@ function buildRadial() {
       g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onDiseaseClick(o.d); } });
     }
   }
-  el("text", { x: 20, y: H - 16, class: "cnt" }, svg).textContent = `軸を1つも共有しない ${DIS.length - 1 - neighbours.length}疾患は非表示`;
+  el("text", { x: 20, y: H - 16, class: "cnt" }, svg).textContent = `軸を1つも共有しない ${activeDiseases().filter(d => d.id !== c.id).length - neighbours.length}疾患は非表示`;
 }
 
 // 指定した軸のスポークを強調し、それ以外を薄くする
@@ -596,7 +617,7 @@ function showRadialNeighbour(o) {
   highlightSpokes(o.S); drawConnectors(o); dimExcept(x => x.id === d.id); markSelected(d.id);
   const onlyCenter = c.a.filter(x => !d.a.includes(x));
   const onlyOther = d.a.filter(x => !c.a.includes(x));
-  let h = `<div class="ptag">${dotHTML(d)}<span class="small">${TIER_NAME[d.t]} · ${o.S.length}/${c.a.length}軸を共有</span></div>
+  let h = `<div class="ptag">${dotHTML(d)}<span class="small">${TIER_NAME[d.t]} · ${esc(genreOf(d).n)} · ${o.S.length}/${c.a.length}軸を共有</span></div>
     <h2>${esc(c.l)} と ${esc(d.n)}</h2>
     <div class="sec"><h3>共通する軸</h3><div class="ptag">${o.S.map(k => `<span class="tag" style="--c:var(--acc)">${esc(AX[k].n)}</span>`).join("")}</div></div>
     <div class="note">見分けるには、共通しない軸を聞く。</div>`;
@@ -624,7 +645,7 @@ function showRadialIntro() {
   const c = byId[state.center];
   highlightSpokes(null); drawConnectors(null); dimExcept(() => true); markSelected(null);
   const near = radial.neighbours.slice(0, 6);
-  let h = `<div class="ptag">${dotHTML(c)}<span class="small">${TIER_NAME[c.t]}</span></div>
+  let h = `<div class="ptag">${dotHTML(c)}<span class="small">${TIER_NAME[c.t]} · ${esc(genreOf(c).n)}</span></div>
     <h2>${esc(c.n)}</h2>
     <dl class="kv"><dt>決め手</dt><dd>${esc(c.k)}</dd><dt>検査</dt><dd>${esc(c.x)}</dd></dl>
     <div class="sec"><h3>近い疾患（共有する軸の数）</h3>${near.map(o => diseaseButton(o.d, `${o.S.length}/${c.a.length}`)).join("")}</div>`;
@@ -759,18 +780,56 @@ for (const p of PRESETS) {
   presetBox.appendChild(b);
 }
 
-// 疾患の選択リスト（緊急度ごとにまとめる）
+// 疾患の選択リスト（ジャンルごとにまとめる。疾患のないジャンルは出さない）
 const diseaseSelect = document.getElementById("dsel");
-for (const t of [1, 2, 3]) {
+for (const g of GENRES) {
+  const list = DIS.filter(d => d.g === g.id);
+  if (!list.length) continue;
   const group = document.createElement("optgroup");
-  group.label = TIER_NAME[t];
-  DIS.filter(d => d.t === t).forEach(d => {
+  group.label = `${g.group}｜${g.n}`;
+  list.forEach(d => {
     const o = document.createElement("option");
     o.value = d.id; o.textContent = d.n;
     group.appendChild(o);
   });
   diseaseSelect.appendChild(group);
 }
+
+// ジャンルの切り替えボタン。大きな分類（腹腔内・腹腔外臓器…）ごとに1行
+const genreButtons = {};
+const genrePicker = document.getElementById("genrePick");
+for (const groupName of [...new Set(GENRES.map(g => g.group))]) {
+  const row = document.createElement("div");
+  row.className = "cat";
+  row.innerHTML = `<span class="rowlab">${esc(groupName)}</span>`;
+  const box = document.createElement("div");
+  box.className = "row";
+  for (const g of GENRES.filter(g => g.group === groupName)) {
+    const n = DIS.filter(d => d.g === g.id).length;
+    const b = document.createElement("button");
+    b.className = "ax g";
+    b.innerHTML = `${esc(g.n)} <span class="cnt-n">${n}</span>`;
+    b.disabled = n === 0; // 疾患がまだないジャンルは押せない
+    b.onclick = () => {
+      state.genres.has(g.id) ? state.genres.delete(g.id) : state.genres.add(g.id);
+      applyGenres();
+    };
+    genreButtons[g.id] = b;
+    box.appendChild(b);
+  }
+  row.appendChild(box);
+  genrePicker.appendChild(row);
+}
+// 表示ジャンルが変わったら、ボタンの見た目と図を更新する
+function applyGenres() {
+  for (const id in genreButtons) genreButtons[id].setAttribute("aria-pressed", state.genres.has(id));
+  document.getElementById("genreCount").textContent = `${activeDiseases().length} / ${DIS.length} 疾患`;
+  setMode(state.mode);
+}
+const setGenres = test => { state.genres = new Set(GENRES.filter(test).map(g => g.id)); applyGenres(); };
+document.getElementById("gAll").onclick = () => setGenres(() => true);
+document.getElementById("gIntra").onclick = () => setGenres(g => g.group === "腹腔内");
+document.getElementById("gExtra").onclick = () => setGenres(g => g.group !== "腹腔内");
 diseaseSelect.onchange = () => { state.center = diseaseSelect.value; state.pinned = null; buildRadial(); refreshPanel(); };
 
 
@@ -784,4 +843,4 @@ state.sel = state.sel.filter(k => AX[k]);
 if (!byId[state.center]) state.center = DIS[0].id;
 diseaseSelect.value = state.center;
 syncAxisButtons();
-setMode("axes");
+applyGenres(); // ここで最初の図も描かれる

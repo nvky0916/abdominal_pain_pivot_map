@@ -26,6 +26,13 @@
  <!-- data.js に書き間違いがあると、ここに赤い警告が出る -->
  <div id="errors" hidden></div>
 
+ <!-- 表示するジャンルの切り替え（ボタンは app.js が並べる） -->
+ <details class="ctrl genres" id="genreBox">
+  <summary>表示するジャンル <span id="genreCount"></span></summary>
+  <div class="row" style="margin-top:8px"><button class="pre" id="gAll">すべて</button><button class="pre" id="gIntra">腹腔内だけ</button><button class="pre" id="gExtra">腹腔外・全身だけ</button></div>
+  <div id="genrePick" style="display:grid;gap:6px"></div>
+ </details>
+
  <!-- モード切り替えのタブ -->
  <div class="tabs" role="tablist">
   <button role="tab" id="tabA" aria-selected="true">軸を選んでマップ</button>
@@ -62,8 +69,25 @@
  <footer>学習用の整理図。各疾患の軸は典型像に基づく単純化で、実際の患者では欠けることも加わることもある。迷ったら危険な群として扱う。</footer>
 </div>
 
-<!-- 読み込む順番が大事：先にデータ、次に動き -->
+<!-- 読み込む順番が大事：軸 → 疾患 → 動き -->
 <script src="js/data.js"></script>
+<!-- 疾患（ジャンル別）。00_genres.js は必ず最初。ファイルを足したらここにも1行足す -->
+<script src="js/diseases/00_genres.js"></script>
+<script src="js/diseases/11_upper_gi.js"></script>
+<script src="js/diseases/12_hepatobiliary.js"></script>
+<script src="js/diseases/13_bowel.js"></script>
+<script src="js/diseases/14_urinary.js"></script>
+<script src="js/diseases/15_gyn.js"></script>
+<script src="js/diseases/21_cardio.js"></script>
+<script src="js/diseases/22_resp.js"></script>
+<script src="js/diseases/23_esophagus.js"></script>
+<script src="js/diseases/24_msk.js"></script>
+<script src="js/diseases/25_inguinal.js"></script>
+<script src="js/diseases/31_immune.js"></script>
+<script src="js/diseases/32_endocrine.js"></script>
+<script src="js/diseases/33_toxic.js"></script>
+<script src="js/diseases/34_infection.js"></script>
+<script src="js/diseases/41_other.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
