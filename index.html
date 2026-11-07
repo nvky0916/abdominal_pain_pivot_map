@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>腹痛ピボットマップ</title>
+<!-- 文字の書体（Google Fonts） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Old+Mincho:wght@700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<!-- 見た目の設定 -->
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!--
+  index.html ― ページの骨組み
+  図や説明欄の中身は js/app.js が自動で作るので、ここには「入れ物」だけを置いている。
+  タイトルや説明文を変えたいときは、このファイルの文章を書き換える。
+-->
+<div class="wrap">
+ <header>
+  <div class="eyebrow">Pivot &amp; Cluster · 急性腹痛</div>
+  <h1>腹痛ピボットマップ</h1>
+  <p class="lede">疾患ごとに、問診でわかる特徴（軸）を複数持たせた。軸を選べばその場でベン図ができ、疾患を選べばその疾患と軸を共有する疾患が周りに並ぶ。</p>
+ </header>
+
+ <!-- data.js に書き間違いがあると、ここに赤い警告が出る -->
+ <div id="errors" hidden></div>
+
+ <!-- モード切り替えのタブ -->
+ <div class="tabs" role="tablist">
+  <button role="tab" id="tabA" aria-selected="true">軸を選んでマップ</button>
+  <button role="tab" id="tabD" aria-selected="false">疾患を中心にマップ</button>
+ </div>
+
+ <!-- モードA：軸を選ぶ操作パネル（ボタンは app.js が並べる） -->
+ <div class="ctrl" id="ctrlA">
+  <div class="row"><span class="rowlab">プリセット</span><span id="presets" class="row"></span></div>
+  <div id="axpick" style="display:grid;gap:6px"></div>
+  <div class="small">軸は4つまで。5つ目を選ぶと最初の軸が外れる。</div>
+ </div>
+
+ <!-- モードD：中心の疾患を選ぶ操作パネル -->
+ <div class="ctrl" id="ctrlD" hidden>
+  <div class="row"><span class="rowlab">中心の疾患</span><select id="dsel" aria-label="中心にする疾患"></select></div>
+  <div class="small">中心に近いほど共有する軸が多い。周りの疾患をタップすると、見分けるための問診が出る。</div>
+ </div>
+
+ <div class="grid">
+  <!-- 図（SVG） -->
+  <div class="mapbox">
+   <div class="scroll"><svg id="map" viewBox="0 0 1000 760" role="img" aria-label="腹痛のピボットマップ"></svg></div>
+   <div class="legend">
+    <span><i class="dot d1"></i>致死的・分単位で動く</span>
+    <span><i class="dot d2"></i>緊急・当日中に診断</span>
+    <span><i class="dot d3"></i>準緊急・外来で可</span>
+   </div>
+  </div>
+  <!-- 右の説明欄 -->
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+ </div>
+
+ <footer>学習用の整理図。各疾患の軸は典型像に基づく単純化で、実際の患者では欠けることも加わることもある。迷ったら危険な群として扱う。</footer>
+</div>
+
+<!-- 読み込む順番が大事：先にデータ、次に動き -->
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
