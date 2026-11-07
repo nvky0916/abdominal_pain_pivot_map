@@ -33,23 +33,6 @@ pivot-map/
 └── README.md       このファイル
 ```
 
-## 手元で開く
-
-`index.html` をダブルクリックしてブラウザで開くだけ。インストールは不要。
-`data.js` や `diseases` フォルダのファイルを書き換えて保存したら、ブラウザを再読み込みすると反映される。
-
-## GitHub に載せて、ネットで見られるようにする
-
-1. GitHub にログインし、右上の **＋ → New repository**。名前を `pivot-map` などにして **Create repository**。
-2. 作ったリポジトリの画面で **uploading an existing file** を押し、このフォルダの中身（`index.html`・`css`・`js`・`README.md`）をまとめてドラッグして **Commit changes**。
-3. **Settings → Pages** を開き、Source を **Deploy from a branch**、Branch を **main** と **/(root)** にして **Save**。
-4. 1〜2分待つと `https://<ユーザー名>.github.io/pivot-map/` で開けるようになる。
-
-### GitHub 上で直接編集する
-
-リポジトリで `js/data.js`（軸）か `js/diseases/` の中のジャンルファイル（疾患）を開き、右上の鉛筆マーク（Edit）を押す。書き換えたら **Commit changes**。数十秒〜1分で公開ページにも反映される。
-変更の履歴は **History** に残るので、いつでも前の状態に戻せる。
-
 ## 自分で軸を考える
 
 ### 軸を足す（data.js）
