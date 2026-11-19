@@ -6,8 +6,8 @@
      甲状腺機能亢進症、尿毒症
 */
 addDiseases("endocrine", [
-{id:"dka",l:"DKA",n:"糖尿病性ケトアシドーシス",t:1,a:["dm","vom","drug","prog"],k:"口渇・多尿、インスリン中断、SGLT2阻害薬",x:"血糖・ケトン・血ガス（AG開大）"},
-{id:"adr",l:"副腎不全",n:"副腎不全（クリーゼ）",t:1,a:["drug","vom","syn","prog"],k:"ステロイド中断、低血圧",x:"Na・K・血糖、コルチゾール・ACTH"},
-{id:"aip",l:"急性ポルフィリン症",n:"急性間欠性ポルフィリン症",t:2,a:["fem","rec","drug","vom","fam","col"],k:"精神症状・低Na、尿の色調変化",x:"尿PBG"},
-{id:"hca",l:"高Ca血症",n:"高カルシウム血症",t:2,a:["vom","prog","eld","drug"],k:"便秘・多尿・意識変容",x:"補正Ca、PTH、PTHrP"},
+{id:"dka",l:"DKA",n:"糖尿病性ケトアシドーシス",t:1,a:["grad", "diff", "vom", "dm", "drug"],k:"口渇・多尿、インスリン中断、SGLT2阻害薬",x:"血糖・ケトン・血ガス（AG開大）"},
+{id:"adr",l:"副腎不全",n:"副腎不全（クリーゼ）",t:1,a:["grad", "diff", "vom", "syn", "drug"],k:"ステロイド中断、低血圧",x:"Na・K・血糖、コルチゾール・ACTH"},
+{id:"aip",l:"急性ポルフィリン症",n:"急性間欠性ポルフィリン症",t:2,a:["fem", "diff", "vom", "parox", "rec", "fam", "drug"],k:"精神症状・低Na、尿の色調変化",x:"尿PBG"},
+{id:"hca",l:"高Ca血症",n:"高カルシウム血症",t:2,a:["eld", "grad", "diff", "vom", "chr", "drug"],k:"便秘・多尿・意識変容",x:"補正Ca、PTH、PTHrP"},
 ]);

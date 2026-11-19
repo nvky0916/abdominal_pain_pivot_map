@@ -10,7 +10,7 @@
      2. モードA：選んだ軸からベン図を作る
      3. モードD：疾患を中心にした放射状の図を作る
      4. 操作（クリック・ホバー・タブ切り替え）をつなぐ
-     5. 起動
+     5. 起動（High Risk のチェック欄もここ）
 
    用語
      SVG … 図を描くための仕組み。<circle>（円）や <text>（文字）を並べて描く
@@ -65,10 +65,11 @@ function validateData() {
     for (const k of p.a) if (!AX[k]) problems.push(`プリセット「${p.n}」の軸「${k}」が AX にない`);
   }
 
+  const box = document.getElementById("errors");
+  box.hidden = true;
   if (problems.length) {
-    const box = document.getElementById("errors");
     box.hidden = false;
-    box.innerHTML = "<b>data.js / diseases フォルダに直すところがあります</b><ul>" +
+    box.innerHTML = `<b>${esc(dataSource)} に直すところがあります</b><ul>` +
       problems.map(p => `<li>${esc(p)}</li>`).join("") + "</ul>";
   }
   return problems.length === 0;
@@ -105,7 +106,7 @@ const TIER_COLOR = ["", "var(--t1)", "var(--t2)", "var(--t3)"];
 const SLOT = ["var(--s0)", "var(--s1)", "var(--s2)", "var(--s3)"];
 
 // 疾患IDから疾患データを引く辞書  byId["app"] → 虫垂炎のデータ
-const byId = Object.fromEntries(DIS.map(d => [d.id, d]));
+let byId = {}; // 中身は start() で作る
 
 // 乱数（毎回同じ並びになるように種を固定）。配置が再読み込みで変わらないようにするため
 function seededRandom(seed) {
@@ -144,7 +145,8 @@ const state = {
   sel: ["sud", "fev", "vom"], // 最初に選ばれている軸（好きに変えてよい）
   center: "ami",             // 疾患中心モードで最初に中心に置く疾患
   pinned: null,              // タップで固定している対象（領域・疾患・軸）
-  genres: new Set(GENRES.map(g => g.id)) // 表示するジャンル（最初は全部）
+  detailId: "",              // 詳しい説明ページで表示している疾患
+  genres: new Set() // 表示するジャンル（start() で全部に設定）
 };
 
 // 今表示するジャンルに入っている疾患だけを返す。図はこの疾患だけで作る
@@ -192,11 +194,102 @@ function diseaseButton(d, rightText = "") {
   return `<button class="dz" data-id="${d.id}">${dotHTML(d)}${esc(d.n)}<em>${rightText || TIER_NAME[d.t]}</em></button>`;
 }
 
+// 疾患の「詳しい説明」の項目（data.js の DETAILS）
+// 古い data.js で DETAILS がなくても動くようにしておく
+const DETAIL_LIST = typeof DETAILS !== "undefined" ? DETAILS : [];
+
+/* ================================================================
+   疾患の詳しい説明ページ（3つ目のタブ）
+   左に疾患の一覧（ジャンル別・説明の記入状況つき）、右に選んだ疾患の説明。
+   説明の中身は diseases フォルダの各疾患に d:{...} の形で書く。
+   ================================================================ */
+const detailText = (d, f) => d.d && d.d[f.id] ? String(d.d[f.id]) : "";
+const detailDone = d => DETAIL_LIST.filter(f => detailText(d, f)).length;
+
+// 左の一覧。検索欄に文字を入れると、名前で絞り込む
+function renderDetailList() {
+  const q = document.getElementById("dsearch").value.trim();
+  const hit = d => !q || d.n.includes(q) || d.l.includes(q) || d.id.includes(q.toLowerCase());
+  let h = "";
+  for (const g of GENRES) {
+    const list = DIS.filter(d => d.g === g.id && hit(d));
+    if (!list.length) continue;
+    h += `<div class="dgroup"><div class="dgname">${esc(g.group)}｜${esc(g.n)}</div>`;
+    h += list.map(d => {
+      const n = detailDone(d), all = DETAIL_LIST.length;
+      const st = !all ? "" : n === all ? "full" : n ? "part" : "none";
+      return `<button class="ditem${d.id === state.detailId ? " on" : ""}" data-detail="${d.id}">${dotHTML(d)}<span>${esc(d.n)}</span>${all ? `<em class="prog ${st}">${n}/${all}</em>` : ""}</button>`;
+    }).join("");
+    h += `</div>`;
+  }
+  const body = document.getElementById("dlistBody");
+  body.innerHTML = h || `<p class="empty">見つからない</p>`;
+  body.querySelectorAll("[data-detail]").forEach(b => b.onclick = () => { state.detailId = b.dataset.detail; renderDetailPage(); });
+}
+
+// 右の説明
+function renderDetailArticle() {
+  const art = document.getElementById("detailArticle");
+  const d = byId[state.detailId];
+  if (!d) { art.innerHTML = `<p class="empty">左の一覧から疾患を選ぶ。</p>`; return; }
+  const g = genreOf(d);
+  let h = `<div class="eyebrow">${esc(g.group)}｜${esc(g.n)}</div>
+    <h2>${esc(d.n)}</h2>
+    <div class="ptag">${dotHTML(d)}<span class="small">${TIER_NAME[d.t]}</span></div>
+    <dl class="kv big"><dt>決め手</dt><dd>${esc(d.k)}</dd><dt>検査</dt><dd>${esc(d.x)}</dd></dl>`;
+
+  // 詳しい説明：まだ書いていない項目は、書き方のヒントを出した枠にする
+  if (DETAIL_LIST.length) {
+    h += `<div class="sec"><h3>詳しい説明 ${detailDone(d)}/${DETAIL_LIST.length}</h3>`;
+    h += DETAIL_LIST.map(f => detailText(d, f)
+      ? `<section class="detail"><h4>${esc(f.n)}</h4><p>${esc(detailText(d, f))}</p></section>`
+      : `<section class="detail empty"><h4>${esc(f.n)}</h4><p>未記入${f.h ? `　${esc(f.h)}` : ""}</p></section>`).join("");
+    h += `</div>`;
+  }
+
+  // 軸をグループ（①〜⑤・追加の問診・High Risk…）ごとに並べる
+  h += `<div class="sec"><h3>この疾患の軸 ${d.a.length}</h3><dl class="axlist">`;
+  for (const [cid, cname] of CATS) {
+    const ks = d.a.filter(k => AX[k].c === cid);
+    if (ks.length) h += `<dt>${esc(cname)}</dt><dd>${ks.map(k => `<span class="tag ghost">${esc(AX[k].n)}${hrMark(k)}</span>`).join("")}</dd>`;
+  }
+  h += `</dl></div>`;
+
+  // 共有する軸が多い疾患（ここから説明を行き来できる）
+  const near = DIS.filter(x => x.id !== d.id)
+    .map(x => ({ x, n: x.a.filter(k => d.a.includes(k)).length }))
+    .filter(o => o.n > 0).sort((a, b) => b.n - a.n || a.x.t - b.x.t).slice(0, 6);
+  if (near.length) {
+    h += `<div class="sec"><h3>軸が近い疾患</h3>${near.map(o =>
+      `<button class="dz" data-detail="${o.x.id}">${dotHTML(o.x)}${esc(o.x.n)}<em>${o.n}軸を共有</em></button>`).join("")}</div>`;
+  }
+  h += `<div class="row" style="margin-top:14px"><button class="btn" data-center="${d.id}" style="margin-top:0">疾患を中心にマップで見る →</button></div>`;
+  art.innerHTML = h;
+  art.querySelectorAll("[data-detail]").forEach(b => b.onclick = () => { state.detailId = b.dataset.detail; renderDetailPage(); window.scrollTo({ top: 0 }); });
+  art.querySelectorAll("[data-center]").forEach(b => b.onclick = () => goCenter(b.dataset.center));
+}
+
+function renderDetailPage() {
+  if (!byId[state.detailId]) state.detailId = state.center;
+  renderDetailList();
+  renderDetailArticle();
+}
+document.getElementById("dsearch").addEventListener("input", renderDetailList);
+
+// ほかのページから「詳しい説明」へ移る
+function goDetail(id) {
+  state.detailId = id;
+  setMode("detail");
+}
+
+// High Risk の軸に付ける赤い印（data.js の hr:1）
+const hrMark = k => AX[k] && AX[k].hr ? `<span class="hrmark" title="High Risk">HR</span>` : "";
+
 // 軸の「名前・聞き方・意味」のブロックを並べる
 function questionBlocks(keys, colorOf) {
   return `<div class="qa">${keys.map(k => `
     <div style="--c:${colorOf ? colorOf(k) : "var(--line)"}">
-      <b>${esc(AX[k].n)}</b><q>${esc(AX[k].q)}</q><span>${esc(AX[k].w)}</span>
+      <b>${esc(AX[k].n)}${hrMark(k)}</b><q>${esc(AX[k].q)}</q><span>${esc(AX[k].w)}</span>
     </div>`).join("")}</div>`;
 }
 
@@ -239,6 +332,7 @@ function pinBar() {
 function bindPanel() {
   panel.querySelectorAll(".dz").forEach(b => b.onclick = () => onDiseaseClick(byId[b.dataset.id]));
   panel.querySelectorAll("[data-center]").forEach(b => b.onclick = () => goCenter(b.dataset.center));
+  panel.querySelectorAll("[data-detail]").forEach(b => b.onclick = () => goDetail(b.dataset.detail));
   const u = document.getElementById("unpin");
   if (u) u.onclick = () => { state.pinned = null; refreshPanel(); };
 }
@@ -468,7 +562,7 @@ function diseaseCard(d) {
     <h2>${esc(d.n)}</h2>
     <dl class="kv"><dt>決め手</dt><dd>${esc(d.k)}</dd><dt>検査</dt><dd>${esc(d.x)}</dd></dl>
     <div class="sec"><h3>この疾患の軸 ${d.a.length}</h3><div class="ptag">${tags}</div></div>
-    <button class="btn" data-center="${d.id}">この疾患を中心にマップ →</button>`;
+    <div class="row" style="margin-top:12px"><button class="btn" data-center="${d.id}" style="margin-top:0">中心にマップ →</button><button class="btn" data-detail="${d.id}" style="margin-top:0">詳しい説明 →</button></div>`;
 }
 
 // 説明欄：何も選んでいないとき（モードA）
@@ -524,7 +618,7 @@ function buildRadial() {
   // スポーク（中心の疾患の軸）を描く
   K.forEach((ax, i) => {
     const a = angleOf(i);
-    const g = el("g", { class: "spk", tabindex: 0, role: "button", "aria-label": AX[ax].n }, spokeLayer);
+    const g = el("g", { class: "spk" + (AX[ax].hr ? " hr" : ""), tabindex: 0, role: "button", "aria-label": AX[ax].n }, spokeLayer);
     el("line", { x1: cx + 40 * Math.cos(a), y1: cy + 40 * Math.sin(a), x2: cx + (R1 + 12) * Math.cos(a), y2: cy + (R1 + 12) * Math.sin(a), class: "spoke" }, g);
     const lx = cx + (R1 + 26) * Math.cos(a), ly = cy + (R1 + 26) * Math.sin(a) + 6;
     const anchor = Math.abs(Math.cos(a)) < 0.3 ? "middle" : Math.cos(a) > 0 ? "start" : "end";
@@ -648,6 +742,7 @@ function showRadialIntro() {
   let h = `<div class="ptag">${dotHTML(c)}<span class="small">${TIER_NAME[c.t]} · ${esc(genreOf(c).n)}</span></div>
     <h2>${esc(c.n)}</h2>
     <dl class="kv"><dt>決め手</dt><dd>${esc(c.k)}</dd><dt>検査</dt><dd>${esc(c.x)}</dd></dl>
+    <button class="btn" data-detail="${c.id}">詳しい説明 →</button>
     <div class="sec"><h3>近い疾患（共有する軸の数）</h3>${near.map(o => diseaseButton(o.d, `${o.S.length}/${c.a.length}`)).join("")}</div>`;
   h += nextQuestionHTML(near.map(o => o.d).concat([c]), [], "近い疾患を分ける問診");
   h += `<div class="sec"><h3>この疾患の軸と問診</h3>${questionBlocks(c.a, () => "var(--acc)")}</div>`;
@@ -662,6 +757,7 @@ function showRadialIntro() {
 
 // 今の状態に合わせて説明欄を描き直す
 function refreshPanel() {
+  if (state.mode === "detail") return; // 説明ページには右の欄がない
   const p = state.pinned;
   if (state.mode === "axes") {
     if (!p) showVennIntro();
@@ -720,21 +816,32 @@ svg.addEventListener("click", e => {
 // モード切り替え
 const tabAxes = document.getElementById("tabA");
 const tabDisease = document.getElementById("tabD");
+const tabExplain = document.getElementById("tabX");
 function setMode(mode) {
   state.mode = mode; state.pinned = null; lastRegion = null;
   tabAxes.setAttribute("aria-selected", mode === "axes");
   tabDisease.setAttribute("aria-selected", mode === "disease");
   document.getElementById("ctrlA").hidden = mode !== "axes";
   document.getElementById("ctrlD").hidden = mode !== "disease";
-  mode === "axes" ? buildVenn() : buildRadial();
+  tabExplain.setAttribute("aria-selected", mode === "detail");
+  // 説明ページのときは、マップと操作パネル・ジャンル切り替えを隠す
+  document.getElementById("grid").hidden = mode === "detail";
+  document.getElementById("genreBox").hidden = mode === "detail";
+  document.getElementById("detailPage").hidden = mode !== "detail";
+  if (mode === "axes") buildVenn();
+  else if (mode === "disease") buildRadial();
+  else renderDetailPage();
   refreshPanel();
 }
 tabAxes.onclick = () => setMode("axes");
 tabDisease.onclick = () => setMode("disease");
+tabExplain.onclick = () => setMode("detail");
 
 // 軸の選択ボタンを、CATS のグループごとに並べる
-const axisButtons = {};
+let axisButtons = {};
 const axisPicker = document.getElementById("axpick");
+function buildAxisButtons() {
+axisPicker.innerHTML = ""; axisButtons = {};
 for (const [catId, catName] of CATS) {
   const row = document.createElement("div");
   row.className = "cat";
@@ -745,7 +852,7 @@ for (const [catId, catName] of CATS) {
     if (AX[k].c !== catId) continue;
     const b = document.createElement("button");
     b.className = "ax";
-    b.innerHTML = `<span class="n"></span>${esc(AX[k].n)}`;
+    b.innerHTML = `<span class="n"></span>${esc(AX[k].n)}${hrMark(k)}`;
     b.title = AX[k].q;
     b.onclick = () => {
       const i = state.sel.indexOf(k);
@@ -758,6 +865,7 @@ for (const [catId, catName] of CATS) {
   }
   row.appendChild(box);
   axisPicker.appendChild(row);
+}
 }
 function syncAxisButtons() {
   for (const k in axisButtons) {
@@ -772,6 +880,8 @@ function syncAxisButtons() {
 
 // プリセットのボタン
 const presetBox = document.getElementById("presets");
+function buildPresetButtons() {
+presetBox.innerHTML = "";
 for (const p of PRESETS) {
   const b = document.createElement("button");
   b.className = "pre";
@@ -779,9 +889,12 @@ for (const p of PRESETS) {
   b.onclick = () => { state.sel = p.a.slice(0, 4); syncAxisButtons(); state.pinned = null; buildVenn(); refreshPanel(); };
   presetBox.appendChild(b);
 }
+}
 
 // 疾患の選択リスト（ジャンルごとにまとめる。疾患のないジャンルは出さない）
 const diseaseSelect = document.getElementById("dsel");
+function buildDiseaseSelect() {
+diseaseSelect.innerHTML = "";
 for (const g of GENRES) {
   const list = DIS.filter(d => d.g === g.id);
   if (!list.length) continue;
@@ -794,10 +907,13 @@ for (const g of GENRES) {
   });
   diseaseSelect.appendChild(group);
 }
+}
 
 // ジャンルの切り替えボタン。大きな分類（腹腔内・腹腔外臓器…）ごとに1行
-const genreButtons = {};
+let genreButtons = {};
 const genrePicker = document.getElementById("genrePick");
+function buildGenreButtons() {
+genrePicker.innerHTML = ""; genreButtons = {};
 for (const groupName of [...new Set(GENRES.map(g => g.group))]) {
   const row = document.createElement("div");
   row.className = "cat";
@@ -820,6 +936,7 @@ for (const groupName of [...new Set(GENRES.map(g => g.group))]) {
   row.appendChild(box);
   genrePicker.appendChild(row);
 }
+}
 // 表示ジャンルが変わったら、ボタンの見た目と図を更新する
 function applyGenres() {
   for (const id in genreButtons) genreButtons[id].setAttribute("aria-pressed", state.genres.has(id));
@@ -834,13 +951,66 @@ diseaseSelect.onchange = () => { state.center = diseaseSelect.value; state.pinne
 
 
 /* ================================================================
+   High Risk のチェック欄（ページ上部）
+   data.js の HIGH_RISK を、チェックできる項目として並べる。
+   軸ではないのでマップには影響しない。1つでもチェックすると赤い注意が出る。
+   チェックは画面を開いている間だけ（再読み込みで消える）
+   ================================================================ */
+const hrChecked = new Set();
+function renderHighRisk() {
+  const box = document.getElementById("hrbox");
+  if (typeof HIGH_RISK === "undefined") { box.hidden = true; return; }
+  const item = (group, label) => {
+    const key = group + ":" + label;
+    return `<button class="hrchk" aria-pressed="${hrChecked.has(key)}" data-key="${esc(key)}">${esc(label)}</button>`;
+  };
+  const n = hrChecked.size;
+  box.classList.toggle("alert", n > 0);
+  box.innerHTML = `
+    <div class="hrhead">
+      <b>High Risk チェック</b>
+      <span class="hrcount">${n ? `${n}項目あてはまる` : "あてはまる項目を押す"}</span>
+      ${n ? `<button class="hrreset" id="hrReset">すべて外す</button>` : ""}
+    </div>
+    <div class="hrrows">
+      <div class="hrrow"><span class="rowlab">High Risk Patient</span><div class="row">${HIGH_RISK.patient.map(l => item("p", l)).join("")}</div></div>
+      <div class="hrrow"><span class="rowlab">High Risk な痛み</span><div class="row">${HIGH_RISK.pain.map(l => item("s", l)).join("")}</div></div>
+    </div>
+    ${n ? `<p class="hrnote">${esc(HIGH_RISK.note)}</p>` : ""}`;
+  box.querySelectorAll(".hrchk").forEach(b => b.onclick = () => {
+    const k = b.dataset.key;
+    hrChecked.has(k) ? hrChecked.delete(k) : hrChecked.add(k);
+    renderHighRisk();
+  });
+  const r = document.getElementById("hrReset");
+  if (r) r.onclick = () => { hrChecked.clear(); renderHighRisk(); };
+}
+
+
+/* ================================================================
    5. 起動
+   データは JSファイル（js/data.js と js/diseases フォルダ）から読む。
    データに誤りがあっても、正しい部分だけで動くようにしておく
    ================================================================ */
-validateData();
-for (const d of DIS) d.a = (d.a || []).filter(k => AX[k]); // 存在しない軸は無視して続ける
-state.sel = state.sel.filter(k => AX[k]);
-if (!byId[state.center]) state.center = DIS[0].id;
-diseaseSelect.value = state.center;
-syncAxisButtons();
-applyGenres(); // ここで最初の図も描かれる
+
+// どこからデータを読んだか（警告の表示に使う）
+const dataSource = "js/data.js・js/diseases";
+
+// ボタンや選択肢を作り、図を描く
+function start() {
+  validateData();
+  for (const d of DIS) d.a = (d.a || []).filter(k => AX[k]); // 存在しない軸は無視して続ける
+  byId = Object.fromEntries(DIS.map(d => [d.id, d]));
+  state.sel = state.sel.filter(k => AX[k]);
+  if (!state.sel.length && PRESETS[0]) state.sel = PRESETS[0].a.filter(k => AX[k]).slice(0, 4);
+  if (!byId[state.center]) state.center = DIS[0] ? DIS[0].id : "";
+  state.genres = new Set(GENRES.map(g => g.id));
+  state.pinned = null;
+  buildAxisButtons(); buildPresetButtons(); buildDiseaseSelect(); buildGenreButtons();
+  diseaseSelect.value = state.center;
+  syncAxisButtons();
+  renderHighRisk();
+  applyGenres(); // ここで図も描かれる
+}
+
+start();

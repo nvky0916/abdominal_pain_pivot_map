@@ -6,5 +6,5 @@
      レンサ球菌咽頭炎、水痘、チフス熱、結核、ブルセラ症、toxic shock syndrome
 */
 addDiseases("infection", [
-{id:"hz",l:"帯状疱疹",n:"帯状疱疹（皮疹出現前）",t:3,a:["eld","skin","prog"],k:"片側・デルマトームに沿う痛み",x:"数日後の皮疹確認"},
+{id:"hz",l:"帯状疱疹",n:"帯状疱疹（皮疹出現前）",t:3,a:["eld", "grad", "flank", "skin", "cont"],k:"片側・デルマトームに沿う痛み",x:"数日後の皮疹確認"},
 ]);

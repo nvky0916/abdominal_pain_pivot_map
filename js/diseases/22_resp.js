@@ -6,5 +6,5 @@
      胸膜炎、膿胸、気胸、肺動脈血栓塞栓症
 */
 addDiseases("resp", [
-{id:"pna",l:"下葉肺炎",n:"下葉肺炎・胸膜炎",t:2,a:["fev","chest","eld","yng","prog"],k:"呼吸数増加、小児は腹痛として訴える",x:"胸部X線、SpO2"},
+{id:"pna",l:"下葉肺炎",n:"下葉肺炎・胸膜炎",t:2,a:["yng", "eld", "grad", "epi", "fev", "chest", "cont"],k:"呼吸数増加、小児は腹痛として訴える",x:"胸部X線、SpO2"},
 ]);

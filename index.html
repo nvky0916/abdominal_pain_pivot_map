@@ -23,7 +23,10 @@
   <p class="lede">疾患ごとに、問診でわかる特徴（軸）を複数持たせた。軸を選べばその場でベン図ができ、疾患を選べばその疾患と軸を共有する疾患が周りに並ぶ。</p>
  </header>
 
- <!-- data.js に書き間違いがあると、ここに赤い警告が出る -->
+ <!-- High Risk のチェック欄。項目は data.js の HIGH_RISK（中身は app.js が作る） -->
+ <section class="hrbox" id="hrbox" aria-label="High Risk チェック"></section>
+
+ <!-- データに書き間違いがあると、ここに赤い警告が出る -->
  <div id="errors" hidden></div>
 
  <!-- 表示するジャンルの切り替え（ボタンは app.js が並べる） -->
@@ -37,6 +40,7 @@
  <div class="tabs" role="tablist">
   <button role="tab" id="tabA" aria-selected="true">軸を選んでマップ</button>
   <button role="tab" id="tabD" aria-selected="false">疾患を中心にマップ</button>
+  <button role="tab" id="tabX" aria-selected="false">疾患の詳しい説明</button>
  </div>
 
  <!-- モードA：軸を選ぶ操作パネル（ボタンは app.js が並べる） -->
@@ -52,7 +56,7 @@
   <div class="small">中心に近いほど共有する軸が多い。周りの疾患をタップすると、見分けるための問診が出る。</div>
  </div>
 
- <div class="grid">
+ <div class="grid" id="grid">
   <!-- 図（SVG） -->
   <div class="mapbox">
    <div class="scroll"><svg id="map" viewBox="0 0 1000 760" role="img" aria-label="腹痛のピボットマップ"></svg></div>
@@ -65,6 +69,15 @@
   <!-- 右の説明欄 -->
   <aside class="panel" id="panel" aria-live="polite"></aside>
  </div>
+
+ <!-- 3つ目のページ：疾患の詳しい説明（左に疾患の一覧、右に選んだ疾患の説明。中身は app.js が作る） -->
+ <section class="dpage" id="detailPage" hidden>
+  <nav class="dlist" aria-label="疾患の一覧">
+   <input type="search" id="dsearch" placeholder="疾患を探す" aria-label="疾患を探す">
+   <div id="dlistBody"></div>
+  </nav>
+  <article class="darticle" id="detailArticle" aria-live="polite"></article>
+ </section>
 
  <footer>学習用の整理図。各疾患の軸は典型像に基づく単純化で、実際の患者では欠けることも加わることもある。迷ったら危険な群として扱う。</footer>
 </div>

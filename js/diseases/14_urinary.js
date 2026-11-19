@@ -6,7 +6,7 @@
      膀胱炎、尿閉、腎膿瘍
 */
 addDiseases("urinary", [
-{id:"uro",l:"尿管結石",n:"尿管結石",t:3,a:["sud","col","uri","vom","rec"],k:"のたうち回る側腹部痛",x:"尿検査、エコー（水腎）、単純CT"},
-{id:"pye",l:"腎盂腎炎",n:"急性腎盂腎炎",t:2,a:["fev","uri","fem","prog","vom"],k:"CVA叩打痛、悪寒戦慄",x:"尿検査・尿培養、エコー（水腎）"},
-{id:"rinf",l:"腎梗塞",n:"腎梗塞",t:2,a:["sud","af","uri","vom"],k:"結石らしくない側腹部痛",x:"LDH著増、造影CT（楔状の造影不良）"},
+{id:"uro",l:"尿管結石",n:"尿管結石",t:3,a:["male", "sud", "writhe", "flank", "groin", "vom", "uri", "inter", "rec"],k:"のたうち回る側腹部痛",x:"尿検査、エコー（水腎）、単純CT"},
+{id:"pye",l:"腎盂腎炎",n:"急性腎盂腎炎",t:2,a:["fem", "grad", "flank", "vom", "fev", "uri", "cont"],k:"CVA叩打痛、悪寒戦慄",x:"尿検査・尿培養、エコー（水腎）"},
+{id:"rinf",l:"腎梗塞",n:"腎梗塞",t:2,a:["sud", "flank", "vom", "uri", "h48", "cont", "card"],k:"結石らしくない側腹部痛",x:"LDH著増、造影CT（楔状の造影不良）"},
 ]);

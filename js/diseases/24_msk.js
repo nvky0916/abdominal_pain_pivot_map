@@ -6,5 +6,5 @@
      神経根症、椎間板ヘルニア、腸腰筋膿瘍、肋骨すべり症候群、腹直筋鞘血腫
 */
 addDiseases("msk", [
-{id:"acn",l:"ACNES",n:"前皮神経絞扼症候群",t:3,a:["rec","fem","yng"],k:"指1本で示せる限局痛、Carnett徴候",x:"局所麻酔で診断的治療"},
+{id:"acn",l:"ACNES",n:"前皮神経絞扼症候群",t:3,a:["yng", "fem", "move", "cont", "rec", "chr"],k:"指1本で示せる限局痛、Carnett徴候",x:"局所麻酔で診断的治療"},
 ]);
